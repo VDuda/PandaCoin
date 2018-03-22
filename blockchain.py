@@ -3,9 +3,11 @@ import json
 from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
+import os, sys
 
 import requests
 from flask import Flask, jsonify, request
+from werkzeug.utils import secure_filename
 
 
 class Blockchain:
@@ -191,7 +193,10 @@ class Blockchain:
 
 
 # Instantiate the Node
+UPLOAD_FOLDER = '/tmp/upload'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Generate a globally unique address for this node
 node_identifier = str(uuid4()).replace('-', '')
@@ -199,7 +204,42 @@ node_identifier = str(uuid4()).replace('-', '')
 # Instantiate the Blockchain
 blockchain = Blockchain()
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def error_msg(msg = None):
+    if msg is not None:
+        response = {"message":msg}
+        pass
+    else:
+        response = {"message":"error"}
+        pass
+    return jsonify(response), 400
+
+@app.route('/sendimage', methods=['POST'])
+def sendimage():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return error_msg('No file part')
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            return error_msg('No selected file')
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            response = {
+                "message": "image is received",
+                "filename": filename
+            }
+            return jsonify(response), 200
+        pass
+    return error_msg()
+
+# receive image
 @app.route('/mine', methods=['GET'])
 def mine():
     # We run the proof of work algorithm to get the next proof...
@@ -226,6 +266,7 @@ def mine():
         'previous_hash': block['previous_hash'],
     }
     return jsonify(response), 200
+
 
 
 @app.route('/transactions/new', methods=['POST'])
@@ -297,4 +338,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
 
+    
     app.run(host='0.0.0.0', port=port)
