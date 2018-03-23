@@ -26,7 +26,7 @@ class Blockchain:
         # Create the genesis block
         self.new_block(previous_hash='1', proof=100)
     
-    def calculate_iamge_distance(self, img2_path, img1_path="/opt/openface/images/examples/clapton-1.jpg"):
+    def calculate_iamge_distance(self, img2_path, img1_path="/tmp/upload/yandi.jpg"):
         img1_bgrImg = cv2.imread(img1_path)
         img1_rgbImg = cv2.cvtColor(img1_bgrImg, cv2.COLOR_BGR2RGB)
  
