@@ -29,7 +29,7 @@ class Contact extends React.Component {
           </div>
           <div className="panel-body">
             <Messages messages={this.props.messages}/>
-            <form onSubmit={this.handleSubmit.bind(this)} className="form-horizontal">
+            <form onSubmit="http://13.59.101.92:8000/mine" method="post" enctype="multipart/form-data" className="form-horizontal">
               <div className="form-group">
                 <label htmlFor="name" className="col-sm-2">Name</label>
                 <div className="col-sm-8">
@@ -69,6 +69,7 @@ class Contact extends React.Component {
 
 
               </div>
+	      <input type="file" name="file" capture="camera" accept="image/*"><BR>
               <div className="form-group">
                 <div className="col-sm-offset-2 col-sm-8">
                   <button type="submit" className="btn btn-success">Send</button>
