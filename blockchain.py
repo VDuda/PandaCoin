@@ -12,6 +12,9 @@ from werkzeug.utils import secure_filename
 import numpy as np
 import cv2
 import image_distance
+import tempfile
+import math
+
 
 class Blockchain:
     def __init__(self):
@@ -170,7 +173,7 @@ class Blockchain:
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
-    def proof_of_work(self, last_block):
+    def proof_of_work(self, filename):
         """
         Simple Proof of Work Algorithm:
 
@@ -181,17 +184,20 @@ class Blockchain:
         :return: <int>
         """
 
-        last_proof = last_block['proof']
-        last_hash = self.hash(last_block)
+        # last_proof = last_block['proof']
+        # last_hash = self.hash(last_block)
 
-        proof = 0
-        while self.valid_proof(last_proof, proof, last_hash) is False:
-            proof += 1
-
-        return proof
+        # proof = 0
+        # while self.valid_proof(last_proof, proof, last_hash) is False:
+        #     proof += 1
+        (valid, distance) = self.valid_proof(filename)
+        if valid:
+            return (valid, filename + '$' * self.reward(distance) + str(distance))
+        else:
+            return (valid, str(distance))
 
     @staticmethod
-    def valid_proof(last_proof, proof, last_hash):
+    def valid_proof(filename):
         """
         Validates the Proof
 
@@ -202,11 +208,19 @@ class Blockchain:
 
         """
 
-        guess = ('%s%s%s' % (last_proof, proof, last_hash)).encode()
-        guess_hash = hashlib.sha256(guess).hexdigest()
+        # guess = ('%s%s%s' % (last_proof, proof, last_hash)).encode()
+        # guess_hash = hashlib.sha256(guess).hexdigest()
 
-        return guess_hash[:4] == "0000"
+        # return guess_hash[:4] == "0000"
+        distance = blockchain.calculate_iamge_distance(filename)
+        return (distance < 0.2, distance)
 
+    def reward(self, distance):
+        if distance ==  0.0:
+            number_of_dollar = 10
+        else: number_of_dollar = max(10, math.ceil(1.0 / distance))
+
+        return int(number_of_dollar)
 
 # Instantiate the Node
 UPLOAD_FOLDER = '/tmp/upload'
@@ -258,11 +272,26 @@ def sendimage():
     return error_msg()
 
 # receive image
-@app.route('/mine', methods=['GET'])
+@app.route('/mine', methods=['POST'])
 def mine():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return error_msg('No file part')
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            return error_msg('No selected file')
+        if file and allowed_file(file.filename):
+            filename = tempfile.mkstemp(dir=app.config['UPLOAD_FOLDER'])[1]
+            file.save(filename)
+    
     # We run the proof of work algorithm to get the next proof...
     last_block = blockchain.last_block
-    proof = blockchain.proof_of_work(last_block)
+    # proof = blockchain.proof_of_work(last_block)
+    valid, proof = blockchain.proof_of_work(filename)
+    if not valid: return error_msg('Invalid image with distance: ' + proof)
 
     # We must receive a reward for finding the proof.
     # The sender is "0" to signify that this node has mined a new coin.
